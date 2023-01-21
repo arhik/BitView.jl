@@ -2,6 +2,14 @@ module BitView
 
 export bitview, BitViewArray
 
+
+# utility function
+Base.uinttype(::Type{T}) where T <: Unsigned = T
+
+# for images
+Base.uinttype(::Type{Normed{UInt8, 0}}) = UInt8
+Base.uinttype(::Type{N0f8}) = UInt8
+
 mutable struct BitViewArray{T, N} <: AbstractArray{T, N}
     subArray::SubArray
     dims::NTuple{N,Int}
@@ -20,6 +28,7 @@ mutable struct BitViewArray{T, N} <: AbstractArray{T, N}
         return b
     end
 end
+
 
 bitview(a::Array{T, N}) where {T, N} = BitViewArray{T, N}(a)
 bitview(a::Base.ReinterpretArray{T, N}) where {T, N} = BitViewArray{T, N}(a)
