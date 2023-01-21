@@ -3,6 +3,9 @@ uuid = "5f00f931-f39e-41a2-b6c7-b70654a26358"
 authors = ["arhik <arhik23@gmail.com>"]
 version = "0.1.0"
 
+[deps]
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+
 [compat]
 julia = "1.8"
 

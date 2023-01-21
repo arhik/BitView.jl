@@ -26,20 +26,22 @@ bitview(a::Base.ReinterpretArray{T, N}) where {T, N} = BitViewArray{T, N}(a)
 
 Base.size(b::BitViewArray{T, N}) where {T, N} = b.dims
 Base.size(b::BitViewArray{T, N}, a::Int) where {T, N} = getindex(b.dims, a)
-Base.length(b::BitViewArray{T, N}) where {T, N} = sizeof(UInt64)*( b.dims |> prod )
+Base.length(b::BitViewArray{T, N}) where {T, N} = sizeof(eltype(b))*( b.dims |> prod )
 
 function Base.getindex(b::BitViewArray{T, N}, I...) where {T, N}
-	(idx, subidx) = div.(I .- 1, 8 .* sizeof(T), RoundDown) .+ 1, mod.(I, 8 .* sizeof(T)) .- 1
-	return (b.subArray[idx...] & (ones(UInt64, length(subidx)) .<< subidx)) != 0
+	stride = (sizeof(eltype(b))*8, ones(Int, ndims(b)-1)...)
+	(idx, subidx) = div.(I .- 1, stride, RoundDown) .+ 1, mod(first(I), stride |> first) - 1
+	return (b.subArray[idx...] & ((Base.uinttype(eltype(b)) |> one) << subidx)) != 0
 end
 
-function Base.getindex(b::BitViewArray{T, N}, I::Union{Colon, AbstractRange}) where {T, N}
-	Base._getindex(IndexStyle(b.subArray), b, I)
+# function Base.getindex(b::BitViewArray{T, N}, I::Union{Colon, AbstractRange}) where {T, N}
+	# Base._getindex(IndexStyle(b.subArray), b, I)
+# end
+
+function Base.setindex!(b::BitViewArray{T, N}, c::Bool, I...) where {T, N}
+	stride = (sizeof(eltype(b))*8, ones(Int, ndims(b)-1)...)
+	(idx, subidx) = div.(I .- 1, stride, RoundDown) .+ 1, mod(first(I), stride |> first) - 1
+	b.subArray[idx...] = (b.subArray[idx...] & ((Base.uinttype(eltype(b)) |> one) << subidx)) != 0
 end
 
-function Base.setindex!(b::BitViewArray{T, N}, c::Bool, a::Int) where {T, N}
-	(idx, subidx) = div(a - 1, 8*sizeof(T), RoundDown) + 1, mod(a - 1, 8*sizeof(T)) - 1
-	b.subArray[idx] = (b.subArray[idx] & (UInt64(1) << subidx)) != 0
 end
-
-
