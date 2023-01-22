@@ -2,6 +2,8 @@ module BitView
 
 export bitview, BitViewArray
 
+using Revise
+using Images
 
 # utility function
 Base.uinttype(::Type{T}) where T <: Unsigned = T
@@ -9,6 +11,7 @@ Base.uinttype(::Type{T}) where T <: Unsigned = T
 # for images
 Base.uinttype(::Type{Normed{UInt8, 0}}) = UInt8
 Base.uinttype(::Type{N0f8}) = UInt8
+Base.uinttype(::Type{Gray{N0f8}}) = UInt8
 
 mutable struct BitViewArray{T, N} <: AbstractArray{T, N}
     subArray::SubArray
@@ -29,7 +32,6 @@ mutable struct BitViewArray{T, N} <: AbstractArray{T, N}
     end
 end
 
-
 bitview(a::Array{T, N}) where {T, N} = BitViewArray{T, N}(a)
 bitview(a::Base.ReinterpretArray{T, N}) where {T, N} = BitViewArray{T, N}(a)
 
@@ -43,14 +45,18 @@ function Base.getindex(b::BitViewArray{T, N}, I...) where {T, N}
 	return (b.subArray[idx...] & ((Base.uinttype(eltype(b)) |> one) << subidx)) != 0
 end
 
-# function Base.getindex(b::BitViewArray{T, N}, I::Union{Colon, AbstractRange}) where {T, N}
-	# Base._getindex(IndexStyle(b.subArray), b, I)
-# end
+function Base.getindex(b::BitViewArray{T, N}, I::Union{Colon, AbstractRange}) where {T, N}
+	Base._getindex(IndexStyle(b.subArray), b, I)
+end
 
 function Base.setindex!(b::BitViewArray{T, N}, c::Bool, I...) where {T, N}
 	stride = (sizeof(eltype(b))*8, ones(Int, ndims(b)-1)...)
 	(idx, subidx) = div.(I .- 1, stride, RoundDown) .+ 1, mod(first(I), stride |> first) - 1
-	b.subArray[idx...] = (b.subArray[idx...] & ((Base.uinttype(eltype(b)) |> one) << subidx)) != 0
+	b.subArray[idx...] = ifelse(
+		c,
+		(b.subArray[idx...] | ((Base.uinttype(eltype(b)) |> one) << subidx)),
+		(b.subArray[idx...] & ~((Base.uinttype(eltype(b)) |> one) << subidx))
+	)
 end
 
 end
