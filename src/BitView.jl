@@ -45,6 +45,12 @@ function Base.getindex(b::BitViewArray{T, N}, I...) where {T, N}
 	return (b.subArray[idx...] & ((Base.uinttype(eltype(b)) |> one) << subidx)) != 0
 end
 
+function Base.getindex(b::BitViewArray{T, N}, I::CartesianIndex) where {T, N}
+	stride = (sizeof(eltype(b))*8, ones(Int, ndims(b)-1)...)
+	(idx, subidx) = div.(I.I .- 1, stride, RoundDown) .+ 1, mod(first(I.I), stride |> first) - 1
+	return (b.subArray[idx...] & ((Base.uinttype(eltype(b)) |> one) << subidx)) != 0
+end
+
 function Base.getindex(b::BitViewArray{T, N}, I::Union{Colon, AbstractRange}) where {T, N}
 	Base._getindex(IndexStyle(b.subArray), b, I)
 end
@@ -52,6 +58,16 @@ end
 function Base.setindex!(b::BitViewArray{T, N}, c::Bool, I...) where {T, N}
 	stride = (sizeof(eltype(b))*8, ones(Int, ndims(b)-1)...)
 	(idx, subidx) = div.(I .- 1, stride, RoundDown) .+ 1, mod(first(I), stride |> first) - 1
+	b.subArray[idx...] = ifelse(
+		c,
+		(b.subArray[idx...] | ((Base.uinttype(eltype(b)) |> one) << subidx)),
+		(b.subArray[idx...] & ~((Base.uinttype(eltype(b)) |> one) << subidx))
+	)
+end
+
+function Base.setindex!(b::BitViewArray{T, N}, c::Bool, I::CartesianIndex) where {T, N}
+	stride = (sizeof(eltype(b))*8, ones(Int, ndims(b)-1)...)
+	(idx, subidx) = div.(I.I .- 1, stride, RoundDown) .+ 1, mod(first(I.I), stride |> first) - 1
 	b.subArray[idx...] = ifelse(
 		c,
 		(b.subArray[idx...] | ((Base.uinttype(eltype(b)) |> one) << subidx)),
