@@ -15,14 +15,13 @@ Base.uinttype(::Type{Gray{N0f8}}) = UInt8
 
 mutable struct BitViewArray{T, N} <: AbstractArray{T, N}
     subArray::SubArray
-    function BitViewArray{T, N}(a::Array{T, N}) where {T, N}
-    	dims = (size(a)..., sizeof(T)*8)
+    function BitViewArray{T, N}(a::Array) where {T, N}
     	a = reinterpret(Base.uinttype(T), a)
     	ranges = size(a) .|> Base.Fix1(UnitRange, 1)
         b = new(view(a, ranges...))
         return b
     end
-    function BitViewArray{T, N}(a::Base.ReinterpretArray{T, N}) where {T, N}
+    function BitViewArray{T, N}(a::Base.ReinterpretArray) where {T, N}
     	a = reinterpret(Base.uinttype(T), a)
     	ranges = size(a) .|> Base.Fix1(UnitRange, 1)
         b = new(view(a, ranges...))
@@ -30,10 +29,10 @@ mutable struct BitViewArray{T, N} <: AbstractArray{T, N}
     end
 end
 
-bitview(a::Array{T, N}) where {T, N} = BitViewArray{T, N}(a)
-bitview(a::Base.ReinterpretArray{T, N}) where {T, N} = BitViewArray{T, N}(a)
+bitview(a::Array{T}) where T = BitViewArray{T, ndims(a) + 1}(a)
+bitview(a::Base.ReinterpretArray{T}) where T = BitViewArray{T, ndims(a) + 1}(a)
 
-Base.size(b::BitViewArray{T, N}) where {T, N} = (b.subArray |> size)..., sizeof(T)*8)
+Base.size(b::BitViewArray{T, N}) where {T, N} = ((b.subArray |> size)..., sizeof(T)*8)
 Base.size(b::BitViewArray{T, N}, a::Int) where {T, N} = getindex(size(b), a)
 Base.length(b::BitViewArray{T, N}) where {T, N} = ( size(b) |> prod )
 
